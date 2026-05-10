@@ -1,0 +1,9 @@
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-L", "native=C:\\Users\\MAIN\\RustroverProjects\\Chronos\\lib\\mpv"]
+
+[env]
+FFMPEG_DIR = "C:/vcpkg/installed/x64-windows"
+FFMPEG_INCLUDE_DIR = "C:/vcpkg/installed/x64-windows/include"
+FFMPEG_LIB_DIR = "C:/vcpkg/installed/x64-windows/lib"
+LIBCLANG_PATH = "C:/Program Files/LLVM/bin"
+BINDGEN_EXTRA_CLANG_ARGS = "-IC:/vcpkg/installed/x64-windows/include --target=x86_64-pc-windows-msvc -fms-compatibility -fms-extensions"
