@@ -1,5 +1,6 @@
 use std::env;
 use std::path::PathBuf;
+use winres;
 
 fn main() {
     let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
@@ -10,7 +11,9 @@ fn main() {
     } else if let Ok(dir) = env::var("FFMPEG_DIR") {
         PathBuf::from(dir)
     } else {
-        println!("cargo:warning=FFmpeg not found. Place it in lib/ffmpeg/ or set the FFMPEG_DIR environment variable.");
+        println!(
+            "cargo:warning=FFmpeg not found. Place it in lib/ffmpeg/ or set the FFMPEG_DIR environment variable."
+        );
         return;
     };
 
@@ -38,6 +41,13 @@ fn main() {
     {
         let mpv_dll = manifest_dir.join("lib").join("mpv").join("libmpv-2.dll");
         copy_dll_to_target(&mpv_dll);
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        let mut res = winres::WindowsResource::new();
+        res.set_icon("icon.ico");
+        res.compile().unwrap();
     }
 
     println!("cargo:rerun-if-env-changed=FFMPEG_DIR");
@@ -116,10 +126,7 @@ fn copy_dlls_to_target(ffmpeg_dir: &PathBuf) {
 #[cfg(target_os = "windows")]
 fn copy_dll_to_target(dll_path: &PathBuf) {
     if !dll_path.exists() {
-        println!(
-            "cargo:warning=DLLが見つかりません: {}",
-            dll_path.display()
-        );
+        println!("cargo:warning=DLLが見つかりません: {}", dll_path.display());
         return;
     }
 

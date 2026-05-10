@@ -29,7 +29,11 @@ pub struct App {
 }
 
 impl App {
-    pub fn new(cc: &eframe::CreationContext<'_>, config: AppConfig) -> Self {
+    pub fn new(
+        cc: &eframe::CreationContext<'_>,
+        config: AppConfig,
+        initial_file: Option<String>,
+    ) -> Self {
         let get_proc = cc
             .get_proc_address
             .as_ref()
@@ -40,7 +44,7 @@ impl App {
         let gl = cc.gl.as_ref().expect("eframe GL context unavailable");
         let gl_renderer = Arc::new(Mutex::new(MpvTextureRenderer::new(gl)));
 
-        Self {
+        let mut app = Self {
             mpv: MpvManager::new(&**get_proc, &config).expect(""),
             gl: Arc::clone(gl),
             gl_renderer,
@@ -52,7 +56,13 @@ impl App {
             drag_pos: None,
             last_seek_time: 0.0,
             pre_maximize_rect: None,
+        };
+
+        if let Some(initial_file) = initial_file {
+            app.open(initial_file);
         }
+
+        app
     }
 
     // ── Private ──────────────────────────────────────────────────────────

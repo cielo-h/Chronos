@@ -1,6 +1,6 @@
 [package]
 name = "Chronos"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["C"]
 edition = "2024"
 
@@ -30,5 +30,5 @@ dirs = "6.0.0"
 [profile.dev]
 opt-level = 3
 
-[package.metadata.wix]
-eula = false
+[build-dependencies]
+winres = "0.1.12"

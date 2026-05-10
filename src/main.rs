@@ -20,6 +20,8 @@ fn main() -> Result<()> {
         return Ok(());
     }
 
+    let initial_file = std::env::args().nth(1);
+
     let _ = logger::init_logger();
     log::info!("Application initializing...");
 
@@ -59,13 +61,13 @@ fn main() -> Result<()> {
         viewport,
         ..Default::default()
     };
-    
+
     eframe::run_native(
         APP_NAME,
         options,
         Box::new(move |cc| {
             setup_custom_fonts(&cc.egui_ctx);
-            Ok(Box::new(App::new(cc, config)))
+            Ok(Box::new(App::new(cc, config, initial_file)))
         }),
     )
     .map_err(|e| anyhow::anyhow!("eframe error: {}", e))?;
