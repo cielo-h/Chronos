@@ -101,6 +101,9 @@ impl App {
     fn open(&mut self, path: String) {
         self.thumbnail_manager = Some(ThumbnailManager::new(path.clone()));
 
+        self.drag_pos = None;
+        self.last_seek_time = 0.0;
+
         self.mpv.load_file(&path);
     }
 
@@ -532,12 +535,27 @@ impl App {
     }
 
     fn ui_convenient_buttons(&mut self, ui: &mut Ui) {
-        let steps: &[f64] = &[10.0, 15.0, 30.0, 60.0, 90.0, 120.0];
+        let button = egui::Button::new(egui::RichText::new("f").size(BTN_SIZE))
+            .min_size(egui::vec2(24.0, 24.0));
+
+        let response = ui
+            .add(button)
+            .on_hover_text("左クリック: 1f戻る / 右クリック: 1f進む");
+
+        if response.clicked() {
+            self.mpv.frame_back_step();
+        }
+
+        if response.secondary_clicked() {
+            self.mpv.frame_step();
+        }
+
+        let steps: &[f64] = &[10.0, 15.0, 30.0, 60.0, 90.0, 120.0, 180.0];
 
         for &step in steps {
             let label = format!("{}", step as i64);
             let hover = format!(
-                "左クリック: {}秒進む / 右クリック: {}秒戻る",
+                "左クリック: {}秒戻る / 右クリック: {}秒進む",
                 step as i64, step as i64
             );
             let response = ui
@@ -545,10 +563,10 @@ impl App {
                 .on_hover_text(hover);
 
             if response.clicked() {
-                self.mpv.seek(step);
+                self.mpv.seek(-step);
             }
             if response.secondary_clicked() {
-                self.mpv.seek(-step);
+                self.mpv.seek(step);
             }
         }
     }

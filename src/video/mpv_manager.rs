@@ -3,6 +3,7 @@ use crate::video::render_context::GpuRenderContext;
 use crate::video::render_context::MpvError;
 use libmpv2::Mpv;
 use std::ffi::{CStr, c_void};
+use std::fmt::format;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::sync::mpsc::{self, Receiver, Sender};
@@ -134,7 +135,18 @@ impl MpvManager {
         if path.is_empty() {
             return;
         }
-        self.mpv.command("loadfile", &[path, "replace"]).ok();
+
+        let at_eof = self
+            .mpv
+            .get_property::<bool>("eof_reached")
+            .unwrap_or(false);
+        if at_eof {
+            self.mpv.set_property("pause", false).ok();
+        }
+
+        self.mpv
+            .command("loadfile", &[path, "replace", "0", "start=0"])
+            .ok();
     }
 
     pub fn close_file(&self) {
@@ -144,6 +156,7 @@ impl MpvManager {
     pub fn seek(&self, secs: f64) {
         let s = secs.to_string();
         self.mpv.command("seek", &[&s, "relative+exact"]).ok();
+        eprintln!("seek request {secs}");
     }
 
     pub fn seek_absolute(&mut self, secs: f64) {
@@ -189,7 +202,7 @@ impl MpvManager {
     }
 
     pub fn get_volume(&self) -> u32 {
-        let raw = self.mpv.get_property::<f64>("volume").unwrap_or(0.0);
+        let raw = self.mpv.get_property::<f64>("volume").unwrap_or(40.0);
         Self::mpv_to_ui_vol(raw)
     }
 
@@ -201,8 +214,9 @@ impl MpvManager {
 
     pub fn toggle_mute(&mut self) {
         let muted = self.mpv.get_property::<bool>("mute").unwrap_or(false);
-        self.mpv.set_property("mute", !muted).ok();
-        self.is_muted = !self.is_muted
+        let new_muted = !muted;
+        self.mpv.set_property("mute", new_muted).ok();
+        self.is_muted = new_muted;
     }
 
     pub fn frame_step(&self) {
@@ -234,7 +248,7 @@ impl MpvManager {
         self.is_playing = !self.mpv.get_property::<bool>("pause").unwrap_or(false);
         self.is_muted = self.mpv.get_property::<bool>("mute").unwrap_or(false);
         self.volume = {
-            let raw = self.mpv.get_property::<f64>("volume").unwrap_or(20.0);
+            let raw = self.mpv.get_property::<f64>("volume").unwrap_or(40.0);
             Self::mpv_to_ui_vol(raw)
         };
     }

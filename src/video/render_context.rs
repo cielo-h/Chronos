@@ -174,6 +174,7 @@ impl GpuRenderContext {
         let mut ctx: *mut mpv_render_context = std::ptr::null_mut();
         let rc =
             unsafe { mpv_render_context_create(&mut ctx, mpv.ctx.as_ptr(), params.as_mut_ptr()) };
+        log::debug!("mpv_render_context_create {}", rc);
         if rc < 0 {
             return Err(MpvError::RenderContextCreate(rc));
         }

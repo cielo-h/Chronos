@@ -47,7 +47,7 @@ fn main() -> Result<()> {
     let mut viewport = egui::ViewportBuilder::default()
         .with_icon(icon)
         .with_title(APP_NAME)
-        .with_min_inner_size([1200.0, 900.0])
+        .with_min_inner_size([1300.0, 900.0])
         .with_inner_size([config.window_width as f32, config.window_height as f32])
         .with_maximized(config.is_maximized);
 
