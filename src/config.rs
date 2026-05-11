@@ -6,6 +6,72 @@ use std::path::PathBuf;
 const CONFIG_FILE: &str = "config.json";
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct HotkeyConfig {
+    #[serde(default = "hotkey_play_pause")]
+    pub play_pause: egui::Key,
+    #[serde(default = "hotkey_seek_backward")]
+    pub seek_backward: egui::Key,
+    #[serde(default = "hotkey_seek_forward")]
+    pub seek_forward: egui::Key,
+    #[serde(default = "hotkey_seek_start")]
+    pub seek_start: egui::Key,
+    #[serde(default = "hotkey_seek_end")]
+    pub seek_end: egui::Key,
+    #[serde(default = "hotkey_frame_step")]
+    pub frame_step: egui::Key,
+    #[serde(default = "hotkey_frame_back_step")]
+    pub frame_back_step: egui::Key,
+    #[serde(default = "hotkey_seek_marker")]
+    pub seek_marker: egui::Key,
+    #[serde(default = "hotkey_mute")]
+    pub mute: egui::Key,
+}
+
+impl Default for HotkeyConfig {
+    fn default() -> Self {
+        Self {
+            play_pause: hotkey_play_pause(),
+            seek_backward: hotkey_seek_backward(),
+            seek_forward: hotkey_seek_forward(),
+            seek_start: hotkey_seek_start(),
+            seek_end: hotkey_seek_end(),
+            frame_step: hotkey_frame_step(),
+            frame_back_step: hotkey_frame_back_step(),
+            seek_marker: hotkey_seek_marker(),
+            mute: hotkey_mute(),
+        }
+    }
+}
+
+fn hotkey_play_pause() -> egui::Key {
+    egui::Key::Space
+}
+fn hotkey_seek_backward() -> egui::Key {
+    egui::Key::ArrowLeft
+}
+fn hotkey_seek_forward() -> egui::Key {
+    egui::Key::ArrowRight
+}
+fn hotkey_seek_start() -> egui::Key {
+    egui::Key::Home
+}
+fn hotkey_seek_end() -> egui::Key {
+    egui::Key::End
+}
+fn hotkey_frame_step() -> egui::Key {
+    egui::Key::Period
+}
+fn hotkey_frame_back_step() -> egui::Key {
+    egui::Key::Comma
+}
+fn hotkey_seek_marker() -> egui::Key {
+    egui::Key::Z
+}
+fn hotkey_mute() -> egui::Key {
+    egui::Key::M
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AppConfig {
     #[serde(default = "window_x")]
     pub window_x: i32,
@@ -19,6 +85,8 @@ pub struct AppConfig {
     pub is_maximized: bool,
     #[serde(default = "volume")]
     pub volume: u32,
+    #[serde(default)]
+    pub hotkeys: HotkeyConfig,
 }
 
 impl Default for AppConfig {
@@ -30,6 +98,7 @@ impl Default for AppConfig {
             window_height: window_height(),
             is_maximized: false,
             volume: volume(),
+            hotkeys: HotkeyConfig::default(),
         }
     }
 }

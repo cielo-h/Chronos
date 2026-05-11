@@ -1,4 +1,5 @@
 use crate::config::AppConfig;
+use crate::ui::config_window::ConfigWindow;
 use crate::ui::log_window::LogWindow;
 use crate::ui::seekbar::SeekbarWidget;
 use crate::ui::toast::*;
@@ -20,6 +21,7 @@ pub struct App {
     gl_renderer: Arc<Mutex<MpvTextureRenderer>>,
     config: AppConfig,
     log_window: LogWindow,
+    config_window: ConfigWindow,
     thumbnail_manager: Option<ThumbnailManager>,
     clipboard: Option<Clipboard>,
     toast: Option<Toast>,
@@ -50,6 +52,7 @@ impl App {
             gl_renderer,
             config,
             log_window: LogWindow::new(),
+            config_window: ConfigWindow::default(),
             thumbnail_manager: None,
             clipboard: Clipboard::new().ok(),
             toast: None,
@@ -233,26 +236,61 @@ impl App {
             return;
         }
 
+        if self.config_window.capturing.is_some() {
+            return;
+        }
+
+        let hk = self.config.hotkeys.clone();
+        ui.input(|i| {
+            if i.key_pressed(hk.play_pause) {
+                self.mpv.toggle_pause();
+            }
+            if i.key_pressed(hk.seek_backward) {
+                self.mpv.seek(-5.0);
+            }
+            if i.key_pressed(hk.seek_forward) {
+                self.mpv.seek(5.0);
+            }
+            if i.key_pressed(hk.seek_start) {
+                self.mpv.seek_start();
+            }
+            if i.key_pressed(hk.seek_end) {
+                self.mpv.seek_end();
+            }
+            if i.key_pressed(hk.frame_step) {
+                self.mpv.frame_step();
+            }
+            if i.key_pressed(hk.frame_back_step) {
+                self.mpv.frame_back_step();
+            }
+            if i.key_pressed(hk.seek_marker) {
+                self.mpv.seek_absolute(self.mpv.marker_time);
+            }
+            if i.key_pressed(hk.mute) {
+                self.mpv.toggle_mute();
+            }
+        });
+    }
+
+    fn handle_shortcuts2(&mut self, ui: &Ui) {
+        if ui.egui_wants_keyboard_input() {
+            return;
+        }
+
         if ui.input(|i| i.key_pressed(egui::Key::Space)) {
             self.mpv.toggle_pause();
         }
 
-        if ui.input(|i| i.key_pressed(egui::Key::ArrowLeft)) {
-            let shift = if ui.input(|i| i.modifiers.ctrl) {
-                -10.0
-            } else {
-                -5.0
-            };
-            self.mpv.seek(shift);
+        let (left, left_ctrl) =
+            ui.input(|i| (i.key_pressed(egui::Key::ArrowLeft), i.modifiers.ctrl));
+        if left {
+            self.mpv.seek(if left_ctrl { -10.0 } else { -5.0 });
         }
 
-        if ui.input(|i| i.key_pressed(egui::Key::ArrowRight)) {
-            let shift = if ui.input(|i| i.modifiers.ctrl) {
-                10.0
-            } else {
-                5.0
-            };
-            self.mpv.seek(shift);
+        let (right, left_ctrl) =
+            ui.input(|i| (i.key_pressed(egui::Key::ArrowRight), i.modifiers.ctrl));
+        if right {
+            self.mpv.seek(if left_ctrl { 10.0 } else { 5.0 });
         }
 
         if ui.input(|i| i.key_pressed(egui::Key::Home)) {
@@ -272,6 +310,10 @@ impl App {
 
         if ui.input(|i| i.key_pressed(egui::Key::Z)) {
             self.mpv.seek_absolute(self.mpv.marker_time);
+        }
+
+        if ui.input(|i| i.key_pressed(egui::Key::M)) {
+            self.mpv.toggle_mute();
         }
     }
 
@@ -312,9 +354,15 @@ impl App {
                                 self.open_file();
                                 ui.close();
                             }
+                            ui.add_enabled_ui(self.mpv.is_loaded, |ui| {
+                                if ui.button("ファイルを閉じる").clicked() {
+                                    self.mpv.close_file();
+                                    ui.close();
+                                }
+                            });
 
-                            if ui.button("ファイルを閉じる").clicked() {
-                                self.mpv.close_file();
+                            if ui.button("設定").clicked() {
+                                self.config_window.open = true;
                                 ui.close();
                             }
 
@@ -389,7 +437,10 @@ impl App {
     fn ui_bottom_bar(&mut self, ui: &mut Ui) {
         if ui
             .button(egui::RichText::new(regular::SKIP_BACK).size(BTN_SIZE))
-            .on_hover_text("先頭に戻る [HOME]")
+            .on_hover_text(format!(
+                "先頭に戻る [{}]",
+                self.config.hotkeys.seek_start.symbol_or_name()
+            ))
             .clicked()
         {
             self.mpv.seek_start();
@@ -397,7 +448,10 @@ impl App {
 
         if ui
             .button(egui::RichText::new(regular::REWIND).size(BTN_SIZE))
-            .on_hover_text(format!("5秒戻る [{}]", regular::ARROW_LEFT))
+            .on_hover_text(format!(
+                "5秒戻る [{}]",
+                self.config.hotkeys.seek_backward.symbol_or_name()
+            ))
             .clicked()
         {
             self.mpv.seek(-5.0);
@@ -411,7 +465,10 @@ impl App {
 
         if ui
             .button(egui::RichText::new(play_label).size(BTN_SIZE))
-            .on_hover_text("再生/一時停止 [SPACE]")
+            .on_hover_text(format!(
+                "再生/一時停止 [{}]",
+                self.config.hotkeys.play_pause.symbol_or_name()
+            ))
             .clicked()
         {
             self.mpv.toggle_pause();
@@ -419,7 +476,10 @@ impl App {
 
         if ui
             .button(egui::RichText::new(regular::FAST_FORWARD).size(BTN_SIZE))
-            .on_hover_text(format!("5秒進む [{}]", regular::ARROW_RIGHT))
+            .on_hover_text(format!(
+                "5秒進む [{}]",
+                self.config.hotkeys.seek_forward.symbol_or_name()
+            ))
             .clicked()
         {
             self.mpv.seek(5.0);
@@ -427,7 +487,10 @@ impl App {
 
         if ui
             .button(egui::RichText::new(regular::SKIP_FORWARD).size(BTN_SIZE))
-            .on_hover_text("末尾に移動する [END]")
+            .on_hover_text(format!(
+                "末尾に移動する [{}]",
+                self.config.hotkeys.seek_end.symbol_or_name()
+            ))
             .clicked()
         {
             self.mpv.seek_end();
@@ -443,7 +506,10 @@ impl App {
 
         if ui
             .button(egui::RichText::new(mute_label).size(BTN_SIZE))
-            .on_hover_text("ミュート")
+            .on_hover_text(format!(
+                "ミュート [{}]",
+                self.config.hotkeys.mute.symbol_or_name()
+            ))
             .clicked()
         {
             self.mpv.toggle_mute();
@@ -674,6 +740,10 @@ impl App {
         }
     }
 
+    fn ui_open_settings_window(&mut self, ui: &mut Ui) {
+        self.config_window.show(ui, &mut self.config.hotkeys);
+    }
+
     fn ui_show_toast(&mut self, ui: &mut Ui) {
         if let Some(toast) = &self.toast {
             if toast.start_time.elapsed().as_secs_f32() > 3.0 {
@@ -692,6 +762,7 @@ impl eframe::App for App {
         self.update_config(ui);
 
         self.handle_shortcuts(ui);
+
         self.handle_drag_and_drop(ui);
 
         self.update(ui);
@@ -705,6 +776,8 @@ impl eframe::App for App {
         self.ui_show_toast(ui);
 
         self.ui_open_log_window(ui);
+
+        self.ui_open_settings_window(ui);
 
         ui.request_repaint();
     }
