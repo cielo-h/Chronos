@@ -19,6 +19,7 @@ pub struct App {
     mpv: MpvManager,
     gl: Arc<Context>,
     gl_renderer: Arc<Mutex<MpvTextureRenderer>>,
+    ipc_rx: std::sync::mpsc::Receiver<String>,
     config: AppConfig,
     log_window: LogWindow,
     config_window: ConfigWindow,
@@ -35,6 +36,7 @@ impl App {
         cc: &eframe::CreationContext<'_>,
         config: AppConfig,
         initial_file: Option<String>,
+        ipc_rx: std::sync::mpsc::Receiver<String>,
     ) -> Self {
         let get_proc = cc
             .get_proc_address
@@ -50,6 +52,7 @@ impl App {
             mpv: MpvManager::new(&**get_proc, &config).expect(""),
             gl: Arc::clone(gl),
             gl_renderer,
+            ipc_rx,
             config,
             log_window: LogWindow::new(),
             config_window: ConfigWindow::default(),
@@ -193,6 +196,13 @@ impl App {
             let msg = "Copied to clipboard";
             log::info!("{}", msg);
             self.show_toast(msg, ToastKind::Success);
+        }
+    }
+
+    fn handle_ipc(&mut self, ui: &Ui) {
+        if let Ok(path) = self.ipc_rx.try_recv() {
+            self.open(path);
+            ui.send_viewport_cmd(egui::ViewportCommand::Focus);
         }
     }
 }
@@ -760,6 +770,8 @@ impl App {
 impl eframe::App for App {
     fn ui(&mut self, ui: &mut Ui, _frame: &mut Frame) {
         self.update_config(ui);
+
+        self.handle_ipc(ui);
 
         self.handle_shortcuts(ui);
 
