@@ -218,8 +218,11 @@ impl GpuRenderContext {
     /// Returns `true` if a frame was rendered, `false` if mpv had nothing new.
     pub fn render_frame(&mut self) -> bool {
         let flags = unsafe { mpv_render_context_update(self.ctx) };
-        if flags & UPDATE_FRAME as u64 == 0 {
-            return false;
+        let update = flags & UPDATE_FRAME as u64 != 0;
+        let ready = self.frame_ready.load(Ordering::Acquire);
+
+        if !update && !ready {
+            return  false;
         }
 
         let mut fbo_info = mpv_opengl_fbo {

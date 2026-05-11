@@ -88,7 +88,7 @@ impl MpvManager {
             init.set_property("keep-open", "yes")?;
             Ok(())
         })
-        .expect("mpv initialize failed");
+            .expect("mpv initialize failed");
 
         let frame_ready = Arc::new(AtomicBool::new(false));
 
@@ -99,7 +99,7 @@ impl MpvManager {
             INIT_W,
             INIT_H,
         )
-        .expect("gpu render context created failed");
+            .expect("gpu render context created failed");
 
         mpv.set_property("volume", Self::ui_to_mpv_vol(config.volume))
             .ok();
@@ -156,7 +156,6 @@ impl MpvManager {
     pub fn seek(&self, secs: f64) {
         let s = secs.to_string();
         self.mpv.command("seek", &[&s, "relative+exact"]).ok();
-        eprintln!("seek request {secs}");
     }
 
     pub fn seek_absolute(&mut self, secs: f64) {

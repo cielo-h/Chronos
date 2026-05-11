@@ -511,9 +511,9 @@ impl App {
                 "差分: {:02}分{:04.1}秒 ({:06.1}秒)",
                 mins, secs, diff
             ))
-            .text_style(egui::TextStyle::Monospace)
-            .size(BTN_SIZE)
-            .color(egui::Color32::WHITE),
+                .text_style(egui::TextStyle::Monospace)
+                .size(BTN_SIZE)
+                .color(egui::Color32::WHITE),
         );
     }
 
