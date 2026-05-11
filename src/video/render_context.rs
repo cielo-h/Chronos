@@ -222,7 +222,7 @@ impl GpuRenderContext {
         let ready = self.frame_ready.load(Ordering::Acquire);
 
         if !update && !ready {
-            return  false;
+            return false;
         }
 
         let mut fbo_info = mpv_opengl_fbo {

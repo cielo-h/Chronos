@@ -3,7 +3,6 @@ use crate::video::render_context::GpuRenderContext;
 use crate::video::render_context::MpvError;
 use libmpv2::Mpv;
 use std::ffi::{CStr, c_void};
-use std::fmt::format;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::sync::mpsc::{self, Receiver, Sender};
@@ -88,7 +87,7 @@ impl MpvManager {
             init.set_property("keep-open", "yes")?;
             Ok(())
         })
-            .expect("mpv initialize failed");
+        .expect("mpv initialize failed");
 
         let frame_ready = Arc::new(AtomicBool::new(false));
 
@@ -99,7 +98,7 @@ impl MpvManager {
             INIT_W,
             INIT_H,
         )
-            .expect("gpu render context created failed");
+        .expect("gpu render context created failed");
 
         mpv.set_property("volume", Self::ui_to_mpv_vol(config.volume))
             .ok();

@@ -37,8 +37,12 @@ impl Default for AppConfig {
 fn window_x() -> i32 {
     100
 }
-fn window_y() -> i32 { 100 }
-fn window_width() -> i32 { 1300 }
+fn window_y() -> i32 {
+    100
+}
+fn window_width() -> i32 {
+    1300
+}
 fn window_height() -> i32 {
     900
 }

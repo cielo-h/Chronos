@@ -81,7 +81,7 @@ impl<'a> Widget for SeekbarWidget<'a> {
                 *self.seek_request = Some((ratio as f64) * duration);
             }
         }
-        
+
         if response.clicked_by(egui::PointerButton::Secondary) {
             if let Some(pos) = response
                 .interact_pointer_pos()
@@ -94,7 +94,7 @@ impl<'a> Widget for SeekbarWidget<'a> {
 
         if ui.is_rect_visible(rect) {
             let painter = ui.painter();
-            
+
             let bar_y = rect.center().y;
             painter.line_segment(
                 [
@@ -103,14 +103,14 @@ impl<'a> Widget for SeekbarWidget<'a> {
                 ],
                 Stroke::new(5.0, Color32::from_rgb(80, 80, 80)),
             );
-            
+
             let display_time = self.drag_pos.unwrap_or(self.mpv.current_time);
             let current_x = rect.left() + (display_time / duration) as f32 * rect.width();
             painter.line_segment(
                 [Pos2::new(rect.left(), bar_y), Pos2::new(current_x, bar_y)],
                 Stroke::new(5.0, Color32::LIGHT_BLUE),
             );
-            
+
             let marker_x = rect.left() + (self.mpv.marker_time / duration) as f32 * rect.width();
             painter.line_segment(
                 [
@@ -126,7 +126,7 @@ impl<'a> Widget for SeekbarWidget<'a> {
                 if let Some(pos) = response.hover_pos() {
                     let ratio = ((pos.x - rect.left()) / rect.width()).clamp(0.0, 1.0);
                     let hover_time = (ratio as f64) * duration;
-                    
+
                     egui::Tooltip::for_enabled(&response)
                         .at_pointer()
                         .show(|ui| {
@@ -145,7 +145,7 @@ impl<'a> Widget for SeekbarWidget<'a> {
                                 }
                             }
                         });
-                    
+
                     if let Some(tm) = self.thumbnail_manager {
                         let _ = tm.request_thumbnail(hover_time);
                     }

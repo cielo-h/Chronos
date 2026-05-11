@@ -13,7 +13,9 @@ impl LogWindow {
         self.open = !self.open;
     }
     fn open_log_file() {
-        let Ok(path) = crate::logger::log_path() else { return };
+        let Ok(path) = crate::logger::log_path() else {
+            return;
+        };
         let Some(dir) = path.parent() else { return };
 
         #[cfg(target_os = "windows")]
