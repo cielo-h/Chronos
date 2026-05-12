@@ -409,6 +409,12 @@ impl App {
                 let display_size = tex_size * scale;
 
                 let rect = egui::Rect::from_center_size(available_rect.center(), display_size);
+
+                let response = ui.interact(rect, ui.id(), egui::Sense::click());
+                if response.clicked() {
+                    self.mpv.toggle_pause();
+                }
+
                 if tex_id != 0 {
                     let renderer = Arc::clone(&self.gl_renderer);
                     ui.painter().add(egui::PaintCallback {
