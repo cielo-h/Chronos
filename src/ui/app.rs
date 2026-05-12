@@ -626,7 +626,7 @@ impl App {
             self.mpv.frame_step();
         }
 
-        let steps: &[f64] = &[10.0, 15.0, 30.0, 60.0, 90.0, 120.0, 180.0];
+        let steps: &[f64] = &[10.0, 15.0, 30.0, 60.0, 90.0, 120.0, 180.0, 270.0];
 
         for &step in steps {
             let label = format!("{}", step as i64);
