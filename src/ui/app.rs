@@ -13,6 +13,7 @@ use egui_glow::CallbackFn;
 use egui_phosphor::regular;
 use glow::Context;
 use rfd::FileDialog;
+use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 
 pub struct App {
@@ -29,6 +30,7 @@ pub struct App {
     drag_pos: Option<f64>,
     last_seek_time: f64,
     pre_maximize_rect: Option<egui::Rect>,
+    cursors: BTreeMap<u32, egui::TextureHandle>,
 }
 
 impl App {
@@ -48,6 +50,40 @@ impl App {
         let gl = cc.gl.as_ref().expect("eframe GL context unavailable");
         let gl_renderer = Arc::new(Mutex::new(MpvTextureRenderer::new(gl)));
 
+        let mut cursors = BTreeMap::new();
+        cursors.insert(
+            32,
+            Self::load_image(
+                &cc.egui_ctx,
+                "cursor_32",
+                include_bytes!("../../lib/cursor/cursor32.png"),
+            ),
+        );
+        cursors.insert(
+            48,
+            Self::load_image(
+                &cc.egui_ctx,
+                "cursor_48",
+                include_bytes!("../../lib/cursor/cursor48.png"),
+            ),
+        );
+        cursors.insert(
+            64,
+            Self::load_image(
+                &cc.egui_ctx,
+                "cursor_64",
+                include_bytes!("../../lib/cursor/cursor64.png"),
+            ),
+        );
+        cursors.insert(
+            128,
+            Self::load_image(
+                &cc.egui_ctx,
+                "cursor_128",
+                include_bytes!("../../lib/cursor/cursor128.png"),
+            ),
+        );
+
         let mut app = Self {
             mpv: MpvManager::new(&**get_proc, &config).expect(""),
             gl: Arc::clone(gl),
@@ -62,6 +98,7 @@ impl App {
             drag_pos: None,
             last_seek_time: 0.0,
             pre_maximize_rect: None,
+            cursors,
         };
 
         if let Some(initial_file) = initial_file {
@@ -80,6 +117,15 @@ impl App {
             egui::Stroke::new(1.0, egui::Color32::from_rgb(60, 60, 60));
         visuals.panel_fill = egui::Color32::from_rgb(30, 30, 30);
         cc.egui_ctx.set_visuals(visuals);
+    }
+
+    fn load_image(ctx: &egui::Context, name: &str, image_data: &[u8]) -> egui::TextureHandle {
+        let image = image::load_from_memory(image_data).unwrap().into_rgba8();
+        let size = [image.width() as usize, image.height() as usize];
+        let color_image =
+            egui::ColorImage::from_rgba_unmultiplied(size, image.as_flat_samples().as_slice());
+
+        ctx.load_texture(name, color_image, egui::TextureOptions::LINEAR)
     }
 
     fn show_toast(&mut self, text: impl Into<String>, kind: ToastKind) {
@@ -769,6 +815,42 @@ impl App {
             }
         }
     }
+
+    fn draw_software_cursor(&mut self, ui: &Ui) {
+        if let Some(mouse_pos) = ui.pointer_latest_pos() {
+            ui.set_cursor_icon(egui::CursorIcon::None);
+
+            let base_size = 32.0;
+
+            let scale_factor = ui.pixels_per_point();
+            let target_pixels = (base_size * scale_factor).round() as u32;
+
+            let selected_size = match target_pixels {
+                0..=39 => 32,
+                40..=55 => 48,
+                56..=79 => 64,
+                80..111 => 96,
+                _ => 128,
+            };
+
+            if let Some(texture) = self.cursors.get(&selected_size) {
+                let painter = ui.layer_painter(egui::LayerId::new(
+                    egui::Order::Tooltip,
+                    egui::Id::new("software_cursor_layer"),
+                ));
+
+                let logical_rect =
+                    egui::Rect::from_min_size(mouse_pos, egui::vec2(base_size, base_size));
+
+                painter.image(
+                    texture.id(),
+                    logical_rect,
+                    egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
+                    egui::Color32::WHITE,
+                );
+            }
+        }
+    }
 }
 
 // ── eframe::App ───────────────────────────────────────────────────────────────
@@ -796,6 +878,8 @@ impl eframe::App for App {
         self.ui_open_log_window(ui);
 
         self.ui_open_settings_window(ui);
+
+        self.draw_software_cursor(ui);
 
         ui.request_repaint();
     }
