@@ -257,6 +257,36 @@ const BTN_SIZE: f32 = 16.0;
 const ROW_HEIGHT: f32 = 28.0;
 
 impl App {
+    fn handle_volume_scroll(&mut self, ui: &mut Ui, response: &egui::Response) {
+        if response.hovered() {
+            let scroll_y = ui.input_mut(|i| {
+                let mut delta = 0.0;
+                i.events.retain(|e| {
+                    if let egui::Event::MouseWheel { delta: d, .. } = e {
+                        delta = d.y;
+                        false
+                    } else {
+                        true
+                    }
+                });
+                delta
+            });
+
+            if scroll_y != 0.0 {
+                let step = 5;
+                let delta = if scroll_y > 0.0 { step } else { -step };
+                let new_vol = (self.mpv.volume as i32 + delta).clamp(0, 120);
+                self.mpv.set_volume(new_vol as u32);
+
+                if new_vol == 0 {
+                    self.mpv.is_muted = true;
+                } else if scroll_y > 0.0 {
+                    self.mpv.is_muted = false;
+                }
+            }
+        }
+    }
+
     fn update(&mut self, _ui: &Ui) {
         self.mpv.update_frame();
     }
@@ -326,51 +356,6 @@ impl App {
                 self.mpv.toggle_mute();
             }
         });
-    }
-
-    fn handle_shortcuts2(&mut self, ui: &Ui) {
-        if ui.egui_wants_keyboard_input() {
-            return;
-        }
-
-        if ui.input(|i| i.key_pressed(egui::Key::Space)) {
-            self.mpv.toggle_pause();
-        }
-
-        let (left, left_ctrl) =
-            ui.input(|i| (i.key_pressed(egui::Key::ArrowLeft), i.modifiers.ctrl));
-        if left {
-            self.mpv.seek(if left_ctrl { -10.0 } else { -5.0 });
-        }
-
-        let (right, left_ctrl) =
-            ui.input(|i| (i.key_pressed(egui::Key::ArrowRight), i.modifiers.ctrl));
-        if right {
-            self.mpv.seek(if left_ctrl { 10.0 } else { 5.0 });
-        }
-
-        if ui.input(|i| i.key_pressed(egui::Key::Home)) {
-            self.mpv.seek_start();
-        }
-        if ui.input(|i| i.key_pressed(egui::Key::End)) {
-            self.mpv.seek_end();
-        }
-
-        if ui.input(|i| i.key_pressed(egui::Key::Period)) {
-            self.mpv.frame_step();
-        }
-
-        if ui.input(|i| i.key_pressed(egui::Key::Comma)) {
-            self.mpv.frame_back_step();
-        }
-
-        if ui.input(|i| i.key_pressed(egui::Key::Z)) {
-            self.mpv.seek_absolute(self.mpv.marker_time);
-        }
-
-        if ui.input(|i| i.key_pressed(egui::Key::M)) {
-            self.mpv.toggle_mute();
-        }
     }
 
     fn handle_drag_and_drop(&mut self, ui: &Ui) {
@@ -460,6 +445,8 @@ impl App {
                 if response.clicked() {
                     self.mpv.toggle_pause();
                 }
+
+                self.handle_volume_scroll(ui, &response);
 
                 if tex_id != 0 {
                     let renderer = Arc::clone(&self.gl_renderer);
@@ -592,32 +579,7 @@ impl App {
             self.mpv.set_volume(display_vol);
         }
 
-        if response.hovered() {
-            let scroll_y = ui.input_mut(|i| {
-                let mut delta = 0.0;
-                i.events.retain(|e| {
-                    if let egui::Event::MouseWheel { delta: d, .. } = e {
-                        delta = d.y;
-                        false
-                    } else {
-                        true
-                    }
-                });
-                delta
-            });
-            if scroll_y != 0.0 {
-                let step = 5;
-                let delta = if scroll_y > 0.0 { step } else { -step };
-                let new_vol = (self.mpv.volume as i32 + delta).clamp(0, 120);
-                self.mpv.set_volume(new_vol as u32);
-
-                if new_vol == 0 {
-                    self.mpv.is_muted = true;
-                } else if scroll_y > 0.0 {
-                    self.mpv.is_muted = false;
-                }
-            }
-        }
+        self.handle_volume_scroll(ui, &response);
     }
 
     fn ui_diff_control(&mut self, ui: &mut Ui) {
