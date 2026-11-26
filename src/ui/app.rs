@@ -16,6 +16,8 @@ use glow::Context;
 use rfd::FileDialog;
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
+use std::sync::atomic::{AtomicU32, Ordering};
+static FRAME: AtomicU32 = AtomicU32::new(0);
 
 pub struct App {
     mpv: MpvManager,
@@ -32,6 +34,7 @@ pub struct App {
     last_seek_time: f64,
     pre_maximize_rect: Option<egui::Rect>,
     cursors: BTreeMap<u32, egui::TextureHandle>,
+    pre_maximize_inner_size: egui::Vec2,
 }
 
 impl App {
@@ -90,6 +93,7 @@ impl App {
             gl: Arc::clone(gl),
             gl_renderer,
             ipc_rx,
+            pre_maximize_inner_size: egui::Vec2::new(config.window_width as f32, config.window_height as f32),
             config,
             log_window: LogWindow::new(),
             config_window: ConfigWindow::default(),
@@ -295,14 +299,16 @@ impl App {
     fn update_config(&mut self, ui: &Ui) {
         let is_maximized = ui.input(|i| i.viewport().maximized.unwrap_or(false));
         let outer_rect = ui.input(|i| i.viewport().outer_rect);
+        let inner_rect = ui.input(|i| i.viewport().inner_rect);
 
         if !is_maximized {
-            if let Some(pos) = outer_rect {
-                self.pre_maximize_rect = Some(pos);
-                self.config.window_x = pos.min.x as i32;
-                self.config.window_y = pos.min.y as i32;
-                self.config.window_width = pos.width() as i32;
-                self.config.window_height = pos.height() as i32;
+            if let (Some(outer), Some(inner)) = (outer_rect, inner_rect) {
+                self.pre_maximize_rect = Some(outer);
+                self.pre_maximize_inner_size = inner.size();
+                self.config.window_x = outer.min.x as i32;
+                self.config.window_y = outer.min.y as i32;
+                self.config.window_width = inner.width() as i32;
+                self.config.window_height = inner.height() as i32;
             }
         }
 
@@ -311,7 +317,7 @@ impl App {
                 ui.ctx()
                     .send_viewport_cmd(egui::ViewportCommand::OuterPosition(rect.min));
                 ui.ctx()
-                    .send_viewport_cmd(egui::ViewportCommand::InnerSize(rect.size()));
+                    .send_viewport_cmd(egui::ViewportCommand::InnerSize(self.pre_maximize_inner_size));
             }
         }
 
