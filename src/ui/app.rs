@@ -11,6 +11,7 @@ use eframe::{Frame, egui};
 use egui::Ui;
 use egui_glow::CallbackFn;
 use egui_phosphor::regular;
+use eframe::glow;
 use glow::Context;
 use rfd::FileDialog;
 use std::collections::BTreeMap;
@@ -114,7 +115,7 @@ impl App {
         let mut visuals = egui::Visuals::dark();
         visuals.override_text_color = Some(egui::Color32::WHITE);
         visuals.widgets.noninteractive.bg_stroke =
-            egui::Stroke::new(1.0, egui::Color32::from_rgb(60, 60, 60));
+            egui::Stroke::new(1.0_f32, egui::Color32::from_rgb(60, 60, 60));
         visuals.panel_fill = egui::Color32::from_rgb(30, 30, 30);
         cc.egui_ctx.set_visuals(visuals);
     }
@@ -359,32 +360,35 @@ impl App {
     }
 
     fn handle_drag_and_drop(&mut self, ui: &Ui) {
-        ui.input(|i| {
-            if !i.raw.dropped_files.is_empty() {
-                if let Some(file) = i.raw.dropped_files.first() {
-                    if let Some(path) = &file.path {
-                        let path_str = path.display().to_string();
-                        let ext = path.extension().and_then(|s| s.to_str()).unwrap_or("");
-                        match ext.to_lowercase().as_str() {
-                            "mp4" | "mkv" | "ts" | "avi" | "mov" | "wmv" | "flv" | "webm"
-                            | "m4v" | "mpeg" | "mpg" | "m2ts" | "mxf" => {
-                                log::info!("ファイルをドロップしました: {}", path_str);
-                                self.open(path_str);
-                            }
-                            _ => {
-                                let msg = format!("Unsupported file extension: {}", ext);
-                                log::warn!("{}", msg);
-                                self.show_toast(msg, ToastKind::Error);
-                            }
-                        }
-                    }
-                }
+        let dropped = ui.input(|i| i.raw.dropped_files.first().map(|f| f.path().to_path_buf()));
+
+        let Some(path) = dropped else {
+            return;
+        };
+
+        let path_str = path.display().to_string();
+        let ext = path
+            .extension()
+            .and_then(|s| s.to_str())
+            .unwrap_or("")
+            .to_lowercase();
+
+        match ext.as_str() {
+            "mp4" | "mkv" | "ts" | "avi" | "mov" | "wmv" | "flv" | "webm" | "m4v" | "mpeg"
+            | "mpg" | "m2ts" | "mxf" => {
+                log::info!("ファイルをドロップしました: {}", path_str);
+                self.open(path_str);
             }
-        });
+            _ => {
+                let msg = format!("Unsupported file extension: {}", ext);
+                log::warn!("{}", msg);
+                self.show_toast(msg, ToastKind::Error);
+            }
+        }
     }
 
-    fn ui_menu_bar(&mut self, ui: &Ui) {
-        egui::TopBottomPanel::top("menu_bar")
+    fn ui_menu_bar(&mut self, ui: &mut Ui) {
+        egui::Panel::top("menu_bar")
             .frame(egui::Frame::NONE.fill(egui::Color32::DARK_GRAY))
             .show(ui, |ui| {
                 egui::MenuBar::new().ui(ui, |ui| {
@@ -441,7 +445,7 @@ impl App {
 
                 let rect = egui::Rect::from_center_size(available_rect.center(), display_size);
 
-                let response = ui.interact(rect, ui.id(), egui::Sense::click());
+                let response = ui.interact(rect, ui.scope_id(), egui::Sense::click());
                 if response.clicked() {
                     self.mpv.toggle_pause();
                 }
@@ -692,7 +696,7 @@ impl App {
     }
 
     fn ui_control_panel(&mut self, ui: &mut Ui) {
-        egui::TopBottomPanel::bottom("control_panel")
+        egui::Panel::bottom("control_panel")
             .frame(egui::Frame::NONE.fill(egui::Color32::DARK_GRAY))
             .show(ui, |ui| {
                 egui::Frame::NONE
@@ -752,7 +756,7 @@ impl App {
                 |ctx, class| {
                     assert!(class == egui::ViewportClass::Immediate);
 
-                    egui::CentralPanel::default().show_inside(ctx, |ui| {
+                    egui::CentralPanel::default().show(ctx, |ui| {
                         self.log_window.ui_content(ui);
                     });
 
@@ -798,7 +802,7 @@ impl App {
             if let Some(texture) = self.cursors.get(&selected_size) {
                 let painter = ui.layer_painter(egui::LayerId::new(
                     egui::Order::Tooltip,
-                    egui::Id::new("software_cursor_layer"),
+                    egui::Id::unique("software_cursor_layer"),
                 ));
 
                 let logical_rect =

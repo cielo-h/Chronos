@@ -69,7 +69,7 @@ impl ConfigWindow {
         let mut visuals = egui::Visuals::dark();
         visuals.override_text_color = Some(Color32::WHITE);
         visuals.widgets.noninteractive.bg_stroke =
-            egui::Stroke::new(1.0, Color32::from_rgb(60, 60, 60));
+            egui::Stroke::new(1.0_f32, Color32::from_rgb(60, 60, 60));
         visuals.panel_fill = Color32::from_rgb(30, 30, 30);
         ui.set_visuals(visuals);
     }

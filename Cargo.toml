@@ -5,29 +5,29 @@ authors = ["C"]
 edition = "2024"
 
 [dependencies]
-eframe = { version = "0.34.2", default-features = false, features = ["glow"] }
-egui = { version = "0.34.2", features = ["serde"] }
-egui_glow = "0.34.2"
-egui-phosphor = "0.12.0"
-libmpv2 = "5.0.3"
+eframe = { version = "0.37.0", default-features = false, features = ["glow"] }
+egui = { version = "0.37.0", features = ["serde"] }
+egui_glow = "0.37.0"
+egui-phosphor = { git = "https://github.com/AmmarAbouZor/egui-phosphor", rev = "986f4ce1d30f0df77cedb85046244f3bef22bbb4" }
+libmpv2 = "7.0.1"
 libmpv2-sys = "4.0.1"
 single-instance = "0.3.3"
 log = "0.4.29"
 image = { version = "0.25.10", default-features = false, features = ["png", "jpeg"] }
-arboard = "3.6.1"
-ffmpeg-next = "8.1.0"
-anyhow = "1.0.102"
-chrono = "0.4.44"
-serde = { version = "1.0.228", features = ["derive"] }
-serde_json = "1.0.149"
-egui_extras = "0.34.2"
-rfd = "0.17.2"
+arboard = "3.7.0"
+ffmpeg-next = "9.1.0"
+anyhow = "1.0.105"
+chrono = "0.4.45"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.150"
+egui_extras = "0.37.0"
+rfd = "0.18.0"
 gl = "0.14.0"
-glow = "0.17.0"
-bytemuck = "1.25.0"
-dirs = "6.0.0"
-interprocess = { version = "2.4.2", features = ["tokio"] }
-tokio = "1.52.3"
+glow = "0.18.0"
+bytemuck = "1.25.2"
+dirs = "7.0.0"
+interprocess = { version = "2.4.10", features = ["tokio"] }
+tokio = "1.54.1"
 
 [profile.dev]
 opt-level = 3

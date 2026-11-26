@@ -53,6 +53,7 @@ impl GlObjects {
     /// # Safety
     /// An active OpenGL context must exist on the current thread.
     unsafe fn new(width: u32, height: u32) -> Self {
+        unsafe {
         let mut tex = 0;
         gl::GenTextures(1, &mut tex);
         gl::BindTexture(gl::TEXTURE_2D, tex);
@@ -86,6 +87,7 @@ impl GlObjects {
         Self { fbo, tex }
     }
 }
+}
 
 impl Drop for GlObjects {
     fn drop(&mut self) {
@@ -102,7 +104,7 @@ impl Drop for GlObjects {
 
 /// Notifies the renderer that a new frame is ready.
 unsafe extern "C" fn update_callback(cb_ctx: *mut c_void) {
-    let flag = &*(cb_ctx as *const AtomicBool);
+    let flag = unsafe { &*(cb_ctx as *const AtomicBool) };
     flag.store(true, Ordering::Release);
 }
 
@@ -114,8 +116,10 @@ unsafe extern "C" fn get_proc_addr_mpv(
     ctx: *mut c_void,
     name: *const std::os::raw::c_char,
 ) -> *mut c_void {
-    let loader = *(ctx as *const &dyn Fn(&CStr) -> *const c_void);
-    loader(CStr::from_ptr(name)) as *mut c_void
+    unsafe {
+        let loader = *(ctx as *const &dyn Fn(&CStr) -> *const c_void);
+        loader(CStr::from_ptr(name)) as *mut c_void
+    }
 }
 
 // ---------------------------------------------------------------------------

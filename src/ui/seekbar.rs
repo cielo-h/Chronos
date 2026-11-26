@@ -101,14 +101,14 @@ impl<'a> Widget for SeekbarWidget<'a> {
                     Pos2::new(rect.left(), bar_y),
                     Pos2::new(rect.right(), bar_y),
                 ],
-                Stroke::new(5.0, Color32::from_rgb(80, 80, 80)),
+                Stroke::new(5.0_f32, Color32::from_rgb(80, 80, 80)),
             );
 
             let display_time = self.drag_pos.unwrap_or(self.mpv.current_time);
             let current_x = rect.left() + (display_time / duration) as f32 * rect.width();
             painter.line_segment(
                 [Pos2::new(rect.left(), bar_y), Pos2::new(current_x, bar_y)],
-                Stroke::new(5.0, Color32::LIGHT_BLUE),
+                Stroke::new(5.0_f32, Color32::LIGHT_BLUE),
             );
 
             let marker_x = rect.left() + (self.mpv.marker_time / duration) as f32 * rect.width();
@@ -117,7 +117,7 @@ impl<'a> Widget for SeekbarWidget<'a> {
                     Pos2::new(marker_x, rect.top()),
                     Pos2::new(marker_x, rect.bottom()),
                 ],
-                Stroke::new(2.0, Color32::RED),
+                Stroke::new(2.0_f32, Color32::RED),
             );
 
             painter.circle_filled(Pos2::new(current_x, bar_y), 6.0, Color32::WHITE);

@@ -70,13 +70,9 @@ fn copy_dlls_to_target(ffmpeg_dir: &PathBuf) {
         return;
     }
 
-    let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
-    let target_dir = match out_dir.ancestors().nth(3) {
-        Some(p) => p.to_path_buf(),
-        None => {
-            println!("cargo:warning=ターゲットディレクトリの特定に失敗しました");
-            return;
-        }
+    let Some(target_dir) = target_profile_dir() else {
+        println!("cargo:warning=ターゲットディレクトリの特定に失敗しました");
+        return;
     };
 
     let entries = match std::fs::read_dir(&bin_dir) {
@@ -124,19 +120,25 @@ fn copy_dlls_to_target(ffmpeg_dir: &PathBuf) {
 }
 
 #[cfg(target_os = "windows")]
+fn target_profile_dir() -> Option<PathBuf> {
+    let out_dir = PathBuf::from(env::var("OUT_DIR").ok()?);
+    out_dir
+        .ancestors()
+        .find(|p| p.file_name().is_some_and(|n| n == "build"))
+        .and_then(|p| p.parent())
+        .map(|p| p.to_path_buf())
+}
+
+#[cfg(target_os = "windows")]
 fn copy_dll_to_target(dll_path: &PathBuf) {
     if !dll_path.exists() {
         println!("cargo:warning=DLLが見つかりません: {}", dll_path.display());
         return;
     }
 
-    let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
-    let target_dir = match out_dir.ancestors().nth(3) {
-        Some(p) => p.to_path_buf(),
-        None => {
-            println!("cargo:warning=ターゲットディレクトリの特定に失敗しました");
-            return;
-        }
+    let Some(target_dir) = target_profile_dir() else {
+        println!("cargo:warning=ターゲットディレクトリの特定に失敗しました");
+        return;
     };
 
     let file_name = match dll_path.file_name() {

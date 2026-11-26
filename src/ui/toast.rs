@@ -52,7 +52,7 @@ impl Toast {
     pub fn show(&self, ctx: &egui::Context) {
         let (bg_color, text_color, icon) = self.style();
 
-        egui::Area::new(egui::Id::new("toast_area"))
+        egui::Area::new(egui::Id::unique("toast_area"))
             .anchor(egui::Align2::CENTER_TOP, [0.0, 60.0])
             .show(ctx, |ui| {
                 egui::Frame::popup(ui.style())

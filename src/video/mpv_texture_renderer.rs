@@ -70,79 +70,83 @@ impl MpvTextureRenderer {
 
     /// Compile and link shaders, upload vertex data, cache uniform locations.
     unsafe fn build_gl_resources(gl: &glow::Context) -> GlHandles {
-        let program = gl.create_program().expect("create GL program");
+        unsafe {
+            let program = gl.create_program().expect("create GL program");
 
-        let vs = Self::compile_shader(gl, glow::VERTEX_SHADER, Self::VS_SOURCE);
-        let fs = Self::compile_shader(gl, glow::FRAGMENT_SHADER, Self::FS_SOURCE);
+            let vs = Self::compile_shader(gl, glow::VERTEX_SHADER, Self::VS_SOURCE);
+            let fs = Self::compile_shader(gl, glow::FRAGMENT_SHADER, Self::FS_SOURCE);
 
-        gl.attach_shader(program, vs);
-        gl.attach_shader(program, fs);
-        gl.link_program(program);
+            gl.attach_shader(program, vs);
+            gl.attach_shader(program, fs);
+            gl.link_program(program);
 
-        if !gl.get_program_link_status(program) {
-            panic!(
-                "GL program link error: {}",
-                gl.get_program_info_log(program)
+            if !gl.get_program_link_status(program) {
+                panic!(
+                    "GL program link error: {}",
+                    gl.get_program_info_log(program)
+                );
+            }
+
+            // Shaders are no longer needed once linked.
+            gl.detach_shader(program, vs);
+            gl.detach_shader(program, fs);
+            gl.delete_shader(vs);
+            gl.delete_shader(fs);
+
+            // Upload static vertex data.
+            let vertex_array = gl.create_vertex_array().expect("create VAO");
+            gl.bind_vertex_array(Some(vertex_array));
+
+            let vertex_buffer = gl.create_buffer().expect("create VBO");
+            gl.bind_buffer(glow::ARRAY_BUFFER, Some(vertex_buffer));
+            gl.buffer_data_u8_slice(
+                glow::ARRAY_BUFFER,
+                bytemuck::cast_slice(&Self::VERTICES),
+                glow::STATIC_DRAW,
             );
-        }
 
-        // Shaders are no longer needed once linked.
-        gl.detach_shader(program, vs);
-        gl.detach_shader(program, fs);
-        gl.delete_shader(vs);
-        gl.delete_shader(fs);
+            gl.vertex_attrib_pointer_f32(0, 2, glow::FLOAT, false, 8, 0);
+            gl.enable_vertex_attrib_array(0);
 
-        // Upload static vertex data.
-        let vertex_array = gl.create_vertex_array().expect("create VAO");
-        gl.bind_vertex_array(Some(vertex_array));
+            gl.bind_vertex_array(None);
+            gl.bind_buffer(glow::ARRAY_BUFFER, None);
 
-        let vertex_buffer = gl.create_buffer().expect("create VBO");
-        gl.bind_buffer(glow::ARRAY_BUFFER, Some(vertex_buffer));
-        gl.buffer_data_u8_slice(
-            glow::ARRAY_BUFFER,
-            bytemuck::cast_slice(&Self::VERTICES),
-            glow::STATIC_DRAW,
-        );
+            // Cache uniform locations once — avoids per-frame string lookups.
+            let uniforms = UniformLocations {
+                pos: gl.get_uniform_location(program, "u_pos").expect("u_pos"),
+                size: gl.get_uniform_location(program, "u_size").expect("u_size"),
+                screen_size: gl
+                    .get_uniform_location(program, "u_screen_size")
+                    .expect("u_screen_size"),
+                texture: gl
+                    .get_uniform_location(program, "u_texture")
+                    .expect("u_texture"),
+            };
 
-        gl.vertex_attrib_pointer_f32(0, 2, glow::FLOAT, false, 8, 0);
-        gl.enable_vertex_attrib_array(0);
-
-        gl.bind_vertex_array(None);
-        gl.bind_buffer(glow::ARRAY_BUFFER, None);
-
-        // Cache uniform locations once — avoids per-frame string lookups.
-        let uniforms = UniformLocations {
-            pos: gl.get_uniform_location(program, "u_pos").expect("u_pos"),
-            size: gl.get_uniform_location(program, "u_size").expect("u_size"),
-            screen_size: gl
-                .get_uniform_location(program, "u_screen_size")
-                .expect("u_screen_size"),
-            texture: gl
-                .get_uniform_location(program, "u_texture")
-                .expect("u_texture"),
-        };
-
-        GlHandles {
-            program,
-            vertex_array,
-            vertex_buffer,
-            uniforms,
+            GlHandles {
+                program,
+                vertex_array,
+                vertex_buffer,
+                uniforms,
+            }
         }
     }
 
     unsafe fn compile_shader(gl: &glow::Context, kind: u32, source: &str) -> glow::Shader {
-        let shader = gl.create_shader(kind).expect("create shader");
-        gl.shader_source(shader, source);
-        gl.compile_shader(shader);
+        unsafe {
+            let shader = gl.create_shader(kind).expect("create shader");
+            gl.shader_source(shader, source);
+            gl.compile_shader(shader);
 
-        if !gl.get_shader_compile_status(shader) {
-            panic!(
-                "Shader compile error (type={kind}): {}",
-                gl.get_shader_info_log(shader)
-            );
+            if !gl.get_shader_compile_status(shader) {
+                panic!(
+                    "Shader compile error (type={kind}): {}",
+                    gl.get_shader_info_log(shader)
+                );
+            }
+
+            shader
         }
-
-        shader
     }
 
     /// Draw the mpv texture into `rect` using the current GL context.
