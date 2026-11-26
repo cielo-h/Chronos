@@ -16,8 +16,6 @@ use glow::Context;
 use rfd::FileDialog;
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
-use std::sync::atomic::{AtomicU32, Ordering};
-static FRAME: AtomicU32 = AtomicU32::new(0);
 
 pub struct App {
     mpv: MpvManager,
