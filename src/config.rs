@@ -25,6 +25,14 @@ pub struct HotkeyConfig {
     pub seek_marker: egui::Key,
     #[serde(default = "hotkey_mute")]
     pub mute: egui::Key,
+    #[serde(default = "hotkey_zoom_quarter")]
+    pub zoom_quarter: egui::Key,
+    #[serde(default = "hotkey_zoom_half")]
+    pub zoom_half: egui::Key,
+    #[serde(default = "hotkey_zoom_original")]
+    pub zoom_original: egui::Key,
+    #[serde(default = "hotkey_zoom_double")]
+    pub zoom_double: egui::Key,
 }
 
 impl Default for HotkeyConfig {
@@ -39,6 +47,10 @@ impl Default for HotkeyConfig {
             frame_back_step: hotkey_frame_back_step(),
             seek_marker: hotkey_seek_marker(),
             mute: hotkey_mute(),
+            zoom_quarter: hotkey_zoom_quarter(),
+            zoom_half: hotkey_zoom_half(),
+            zoom_original: hotkey_zoom_original(),
+            zoom_double: hotkey_zoom_double(),
         }
     }
 }
@@ -70,6 +82,10 @@ fn hotkey_seek_marker() -> egui::Key {
 fn hotkey_mute() -> egui::Key {
     egui::Key::M
 }
+fn hotkey_zoom_quarter() -> egui::Key { egui::Key::Num1 }
+fn hotkey_zoom_half() -> egui::Key { egui::Key::Num2 }
+fn hotkey_zoom_original() -> egui::Key { egui::Key::Num3 }
+fn hotkey_zoom_double() -> egui::Key { egui::Key::Num4 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AppConfig {

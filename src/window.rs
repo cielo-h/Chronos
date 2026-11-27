@@ -1,6 +1,9 @@
 use anyhow::Result;
 use eframe::egui;
 
+pub const MIN_W: f32 = 660.0;
+pub const MIN_H: f32 = 280.0;
+
 pub fn build_viewport(
     config: &crate::config::AppConfig,
     config_loaded: bool,
@@ -10,7 +13,7 @@ pub fn build_viewport(
     let mut viewport = egui::ViewportBuilder::default()
         .with_icon(icon)
         .with_title(crate::APP_NAME)
-        .with_min_inner_size([1300.0, 900.0])
+        .with_min_inner_size([MIN_W, MIN_H])
         .with_inner_size([config.window_width as f32, config.window_height as f32])
         .with_maximized(config.is_maximized);
 

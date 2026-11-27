@@ -1,5 +1,5 @@
 use crate::config::HotkeyConfig;
-use eframe::epaint::Color32;
+use egui_phosphor::regular;
 
 const ACTIONS: &[(&str, &str)] = &[
     ("play_pause", "Play / Pause"),
@@ -11,7 +11,21 @@ const ACTIONS: &[(&str, &str)] = &[
     ("frame_back_step", "Frame Back Step"),
     ("seek_marker", "Seek to Marker"),
     ("mute", "Mute"),
+    ("zoom_quarter", "Window 1/4 (Alt+)"),
+    ("zoom_half", "Window 1/2 (Alt+)"),
+    ("zoom_original", "Window 1:1 (Alt+)"),
+    ("zoom_double", "Window 2:1 (Alt+)"),
 ];
+
+pub fn key_label(key: egui::Key) -> String {
+    match key {
+        egui::Key::ArrowLeft => regular::ARROW_LEFT.to_string(),
+        egui::Key::ArrowRight => regular::ARROW_RIGHT.to_string(),
+        egui::Key::ArrowUp => regular::ARROW_UP.to_string(),
+        egui::Key::ArrowDown => regular::ARROW_DOWN.to_string(),
+        _ => key.symbol_or_name().to_string(),
+    }
+}
 
 #[derive(Default)]
 pub struct ConfigWindow {
@@ -37,6 +51,10 @@ fn get_key(hotkeys: &HotkeyConfig, action: &str) -> egui::Key {
         "frame_back_step" => hotkeys.frame_back_step,
         "seek_marker" => hotkeys.seek_marker,
         "mute" => hotkeys.mute,
+        "zoom_quarter" => hotkeys.zoom_quarter,
+        "zoom_half" => hotkeys.zoom_half,
+        "zoom_original" => hotkeys.zoom_original,
+        "zoom_double" => hotkeys.zoom_double,
         _ => egui::Key::Space,
     }
 }
@@ -52,6 +70,10 @@ fn set_key(hotkeys: &mut HotkeyConfig, action: &str, key: egui::Key) {
         "frame_back_step" => hotkeys.frame_back_step = key,
         "seek_marker" => hotkeys.seek_marker = key,
         "mute" => hotkeys.mute = key,
+        "zoom_quarter" => hotkeys.zoom_quarter = key,
+        "zoom_half" => hotkeys.zoom_half = key,
+        "zoom_original" => hotkeys.zoom_original = key,
+        "zoom_double" => hotkeys.zoom_double = key,
         _ => {}
     }
 }
@@ -65,21 +87,11 @@ fn find_conflict<'a>(hotkeys: &HotkeyConfig, action: &str, key: egui::Key) -> Op
 // ── UI ───────────────────────────────────────────────────────────────────────
 
 impl ConfigWindow {
-    fn set_visuals(ui: &mut egui::Ui) {
-        let mut visuals = egui::Visuals::dark();
-        visuals.override_text_color = Some(Color32::WHITE);
-        visuals.widgets.noninteractive.bg_stroke =
-            egui::Stroke::new(1.0_f32, Color32::from_rgb(60, 60, 60));
-        visuals.panel_fill = Color32::from_rgb(30, 30, 30);
-        ui.set_visuals(visuals);
-    }
-
     pub fn show(&mut self, ctx: &mut egui::Ui, hotkeys: &mut HotkeyConfig) {
         if !self.open {
             return;
         }
 
-        Self::set_visuals(ctx);
         self.handle_capture(ctx, hotkeys);
         self.show_conflict_popup(ctx, hotkeys);
         self.show_settings_window(ctx, hotkeys);
@@ -214,7 +226,7 @@ impl ConfigWindow {
         } else {
             ui.add_sized(
                 [KEY_COL_WIDTH, height],
-                egui::Label::new(current.symbol_or_name()),
+                egui::Label::new(key_label(current)),
             );
             if ui.button("Change").clicked() {
                 *capturing = Some(action.to_string());

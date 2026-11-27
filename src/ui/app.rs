@@ -1,5 +1,5 @@
 use crate::config::AppConfig;
-use crate::ui::config_window::ConfigWindow;
+use crate::ui::config_window::{key_label, ConfigWindow};
 use crate::ui::log_window::LogWindow;
 use crate::ui::seekbar::SeekbarWidget;
 use crate::ui::toast::*;
@@ -33,6 +33,8 @@ pub struct App {
     pre_maximize_rect: Option<egui::Rect>,
     cursors: BTreeMap<u32, egui::TextureHandle>,
     pre_maximize_inner_size: egui::Vec2,
+    menu_h: f32,
+    panel_h: f32,
 }
 
 impl App {
@@ -102,6 +104,8 @@ impl App {
             last_seek_time: 0.0,
             pre_maximize_rect: None,
             cursors,
+            menu_h: 0.0,
+            panel_h: 0.0,
         };
 
         if let Some(initial_file) = initial_file {
@@ -332,6 +336,7 @@ impl App {
         }
 
         let hk = self.config.hotkeys.clone();
+        let mut zoom_req: Option<f32> = None;
         ui.input(|i| {
             if i.key_pressed(hk.play_pause) {
                 self.mpv.toggle_pause();
@@ -360,7 +365,55 @@ impl App {
             if i.key_pressed(hk.mute) {
                 self.mpv.toggle_mute();
             }
+
+            if i.modifiers.alt && !i.modifiers.ctrl && !i.modifiers.shift {
+                if i.key_pressed(hk.zoom_quarter) { zoom_req = Some(0.25); }
+                if i.key_pressed(hk.zoom_half) { zoom_req = Some(0.5); }
+                if i.key_pressed(hk.zoom_original) { zoom_req = Some(1.0); }
+                if i.key_pressed(hk.zoom_double) { zoom_req = Some(2.0); }
+            }
         });
+
+        if let Some(s) = zoom_req {
+            self.apply_zoom_key(ui.ctx(), s);
+        }
+    }
+
+    fn apply_zoom_key(&mut self, ctx: &egui::Context, scale: f32) {
+        if !self.mpv.is_loaded {
+            return;
+        }
+        let v = self.mpv.video_size();
+        if v.x <= 0.0 || v.y <= 0.0 {
+            return;
+        }
+
+        let (inner, outer, monitor, maximized) = ctx.input(|i| {
+            let vp = i.viewport();
+            (vp.inner_rect, vp.outer_rect, vp.monitor_size, vp.maximized.unwrap_or(false))
+        });
+
+        let ppp = ctx.pixels_per_point();
+        let ui_h = self.menu_h + self.panel_h;
+
+        let frame = match (inner, outer) {
+            (Some(i), Some(o)) => o.size() - i.size(),
+            _ => egui::Vec2::ZERO,
+        };
+
+        let mut w = (v.x * scale / ppp).max(crate::window::MIN_W);
+        let mut h = (v.y * scale / ppp + ui_h).max(crate::window::MIN_H);
+        if let Some(m) = monitor {
+            w = w.min(m.x - frame.x);
+            h = h.min(m.y - frame.y);
+        }
+        let size = egui::vec2(w, h);
+
+        if maximized {
+            self.pre_maximize_inner_size = size;
+            ctx.send_viewport_cmd(egui::ViewportCommand::Maximized(false));
+        }
+        ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(size));
     }
 
     fn handle_drag_and_drop(&mut self, ui: &Ui) {
@@ -392,7 +445,7 @@ impl App {
     }
 
     fn ui_menu_bar(&mut self, ui: &mut Ui) {
-        egui::Panel::top("menu_bar")
+        let r = egui::Panel::top("menu_bar")
             .frame(egui::Frame::NONE.fill(egui::Color32::DARK_GRAY))
             .show(ui, |ui| {
                 egui::MenuBar::new().ui(ui, |ui| {
@@ -432,6 +485,7 @@ impl App {
                     }
                 });
             });
+        self.menu_h = r.response.rect.height();
     }
 
     fn ui_video_area(&mut self, ui: &mut Ui) {
@@ -496,7 +550,7 @@ impl App {
             .button(egui::RichText::new(regular::SKIP_BACK).size(BTN_SIZE))
             .on_hover_text(format!(
                 "先頭に戻る [{}]",
-                self.config.hotkeys.seek_start.symbol_or_name()
+                key_label(self.config.hotkeys.seek_start)
             ))
             .clicked()
         {
@@ -507,7 +561,7 @@ impl App {
             .button(egui::RichText::new(regular::REWIND).size(BTN_SIZE))
             .on_hover_text(format!(
                 "5秒戻る [{}]",
-                self.config.hotkeys.seek_backward.symbol_or_name()
+                key_label(self.config.hotkeys.seek_backward)
             ))
             .clicked()
         {
@@ -524,7 +578,7 @@ impl App {
             .button(egui::RichText::new(play_label).size(BTN_SIZE))
             .on_hover_text(format!(
                 "再生/一時停止 [{}]",
-                self.config.hotkeys.play_pause.symbol_or_name()
+                key_label(self.config.hotkeys.play_pause)
             ))
             .clicked()
         {
@@ -535,7 +589,7 @@ impl App {
             .button(egui::RichText::new(regular::FAST_FORWARD).size(BTN_SIZE))
             .on_hover_text(format!(
                 "5秒進む [{}]",
-                self.config.hotkeys.seek_forward.symbol_or_name()
+                key_label(self.config.hotkeys.seek_forward)
             ))
             .clicked()
         {
@@ -546,7 +600,7 @@ impl App {
             .button(egui::RichText::new(regular::SKIP_FORWARD).size(BTN_SIZE))
             .on_hover_text(format!(
                 "末尾に移動する [{}]",
-                self.config.hotkeys.seek_end.symbol_or_name()
+                key_label(self.config.hotkeys.seek_end)
             ))
             .clicked()
         {
@@ -565,7 +619,7 @@ impl App {
             .button(egui::RichText::new(mute_label).size(BTN_SIZE))
             .on_hover_text(format!(
                 "ミュート [{}]",
-                self.config.hotkeys.mute.symbol_or_name()
+                key_label(self.config.hotkeys.mute)
             ))
             .clicked()
         {
@@ -633,6 +687,8 @@ impl App {
     }
 
     fn ui_convenient_buttons(&mut self, ui: &mut Ui) {
+        ui.spacing_mut().item_spacing.x = 2.0;
+        ui.spacing_mut().button_padding = egui::vec2(4.0, 2.0);
         let button = egui::Button::new(egui::RichText::new("f").size(BTN_SIZE))
             .min_size(egui::vec2(24.0, 24.0));
 
@@ -700,54 +756,33 @@ impl App {
     }
 
     fn ui_control_panel(&mut self, ui: &mut Ui) {
-        egui::Panel::bottom("control_panel")
+        let r = egui::Panel::bottom("control_panel")
             .frame(egui::Frame::NONE.fill(egui::Color32::DARK_GRAY))
             .show(ui, |ui| {
                 egui::Frame::NONE
-                    .inner_margin(egui::Margin {
-                        left: 8,
-                        right: 8,
-                        top: 0,
-                        bottom: 4,
-                    })
+                    .inner_margin(egui::Margin { left: 8, right: 8, top: 0, bottom: 4 })
                     .show(ui, |ui| {
                         let loaded = self.mpv.is_loaded;
 
-                        ui.add_enabled_ui(loaded, |ui| {
-                            self.ui_seekbar(ui);
+                        ui.add_enabled_ui(loaded, |ui| self.ui_seekbar(ui));
+
+                        ui.horizontal(|ui| {
+                            ui.add_enabled_ui(loaded, |ui| self.ui_bottom_bar(ui));
+                            ui.separator();
+                            self.ui_volume_control(ui);
+                            self.ui_time_view(ui);
                         });
 
                         ui.horizontal(|ui| {
-                            ui.add_enabled_ui(loaded, |ui| {
-                                self.ui_bottom_bar(ui);
-                            });
-
+                            ui.add_enabled_ui(loaded, |ui| self.ui_diff_control(ui));
                             ui.separator();
-
-                            self.ui_volume_control(ui);
-
+                            ui.add_enabled_ui(loaded, |ui| self.ui_capture_control(ui));
                             ui.separator();
-
-                            ui.add_enabled_ui(loaded, |ui| {
-                                self.ui_diff_control(ui);
-                            });
-
-                            ui.separator();
-
-                            ui.add_enabled_ui(loaded, |ui| {
-                                self.ui_capture_control(ui);
-                            });
-
-                            ui.separator();
-
-                            ui.add_enabled_ui(loaded, |ui| {
-                                self.ui_convenient_buttons(ui);
-                            });
-
-                            self.ui_time_view(ui);
+                            ui.add_enabled_ui(loaded, |ui| self.ui_convenient_buttons(ui));
                         });
                     });
             });
+        self.panel_h = r.response.rect.height();
     }
 
     fn ui_open_log_window(&mut self, ui: &mut Ui) {

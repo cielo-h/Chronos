@@ -37,18 +37,7 @@ impl LogWindow {
         }
     }
 
-    fn set_visuals(&mut self, ui: &mut egui::Ui) {
-        let mut visuals = egui::Visuals::dark();
-        visuals.override_text_color = Some(Color32::WHITE);
-        visuals.widgets.noninteractive.bg_stroke =
-            egui::Stroke::new(1.0_f32, Color32::from_rgb(60, 60, 60));
-        visuals.panel_fill = Color32::from_rgb(30, 30, 30);
-        ui.set_visuals(visuals);
-    }
-
     pub fn ui_content(&mut self, ui: &mut egui::Ui) {
-        self.set_visuals(ui);
-
         ui.horizontal(|ui| {
             ui.label(egui::RichText::new(
                 egui_phosphor::regular::MAGNIFYING_GLASS,
