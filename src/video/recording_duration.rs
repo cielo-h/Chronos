@@ -72,6 +72,7 @@ struct Timeline {
     first_cluster: Option<u64>,
     cluster: u64,
     latest: u64,
+    skip_to: Option<u64>,
 }
 
 fn invalid() -> io::Error {
@@ -118,11 +119,22 @@ impl Timeline {
                 result => result?,
             };
             let start = r.stream_position()?;
-            if matches!(id, 0x18538067 | 0x1549a966 | 0x1f43b675 | 0xa0) {
+            let unknown = len == (1u64 << (7 * width)) - 1;
+
+            if id == 0x1f43b675 {
+                self.skip_to = if unknown {
+                    None
+                } else {
+                    start.checked_add(len).filter(|&end| end <= size)
+                };
                 self.offset = start;
                 continue;
             }
-            if len == (1u64 << (7 * width)) - 1 {
+            if matches!(id, 0x18538067 | 0x1549a966 | 0xa0) {
+                self.offset = start;
+                continue;
+            }
+            if unknown {
                 return Err(invalid());
             }
             let end = start.checked_add(len).ok_or_else(invalid)?;
@@ -135,6 +147,14 @@ impl Timeline {
                 0xe7 => {
                     self.cluster = uint(r, len as usize)?;
                     self.first_cluster.get_or_insert(self.cluster);
+                    if let Some(cluster_end) = self.skip_to.take() {
+                        self.latest = self.latest.max(self.cluster);
+                        let position = r.stream_position()?;
+                        let jump = cluster_end.checked_sub(position).ok_or_else(invalid)?;
+                        r.seek_relative(i64::try_from(jump).map_err(|_| invalid())?)?;
+                        self.offset = cluster_end;
+                        continue;
+                    }
                 }
                 0xa3 | 0xa1 => {
                     let (_, track_width) = vint(r, false)?;

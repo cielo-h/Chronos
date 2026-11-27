@@ -179,7 +179,7 @@ impl MpvManager {
 
     pub fn seek_keyframes(&self, secs: f64) {
         let s = secs.to_string();
-        self.mpv.command("seek", &[&s, "absolute+keyframes"]).ok();
+        self.mpv.command("seek", &[&s, "absolute+keyframes+exact"]).ok();
     }
 
     pub fn seek_start(&mut self) {
