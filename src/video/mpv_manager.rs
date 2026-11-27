@@ -1,3 +1,4 @@
+use super::recording_duration::RecordingDuration;
 use crate::config::AppConfig;
 use crate::video::render_context::GpuRenderContext;
 use crate::video::render_context::MpvError;
@@ -68,6 +69,7 @@ pub struct MpvManager {
     pub marker_time: f64,
     pub duration: f64,
     pub current_time: f64,
+    recording: Option<RecordingDuration>,
 
     pub is_loaded: bool,
     pub is_playing: bool,
@@ -115,6 +117,7 @@ impl MpvManager {
             marker_time: 0.0,
             duration: 0.0,
             current_time: 0.0,
+            recording: None,
             is_loaded: false,
             is_playing: false,
             is_muted: false,
@@ -130,7 +133,7 @@ impl MpvManager {
 
     // ── direct api ──────────────────────────────────────────────────────────
 
-    pub fn load_file(&self, path: &str) {
+    pub fn load_file(&mut self, path: &str) {
         if path.is_empty() {
             return;
         }
@@ -143,12 +146,24 @@ impl MpvManager {
             self.mpv.set_property("pause", false).ok();
         }
 
-        self.mpv
-            .command("loadfile", &[path, "replace", "0", "start=0"])
-            .ok();
+        self.recording = None;
+        self.duration = 0.0;
+        let local_mkv = std::path::Path::new(path)
+            .extension()
+            .and_then(|ext| ext.to_str())
+            .is_some_and(|ext| ext.eq_ignore_ascii_case("mkv"))
+            && !path.contains("://");
+        let loaded = self
+            .mpv
+            .command("loadfile", &[path, "replace", "0", "start=0"]);
+        if loaded.is_ok() && local_mkv {
+            self.recording = Some(RecordingDuration::watch(path.to_owned()));
+        }
     }
 
-    pub fn close_file(&self) {
+    pub fn close_file(&mut self) {
+        self.recording = None;
+        self.duration = 0.0;
         self.mpv.command("stop", &[]).ok();
     }
 
@@ -164,9 +179,7 @@ impl MpvManager {
 
     pub fn seek_keyframes(&self, secs: f64) {
         let s = secs.to_string();
-        self.mpv
-            .command("seek", &[&s, "absolute+keyframes+exact"])
-            .ok();
+        self.mpv.command("seek", &[&s, "absolute+keyframes"]).ok();
     }
 
     pub fn seek_start(&mut self) {
@@ -174,10 +187,8 @@ impl MpvManager {
     }
 
     pub fn seek_end(&mut self) {
-        if let Ok(dur) = self.mpv.get_property::<f64>("duration") {
-            let end = (dur - 0.1).max(0.0);
-            let s = end.to_string();
-            self.mpv.command("seek", &[&s, "absolute+exact"]).ok();
+        if self.duration > 0.0 {
+            self.seek_absolute((self.duration - 0.1).max(0.0));
         }
     }
 
@@ -243,6 +254,11 @@ impl MpvManager {
         self.is_loaded = !self.mpv.get_property::<bool>("idle-active").unwrap_or(true);
         self.current_time = self.mpv.get_property::<f64>("time-pos").unwrap_or(0.0);
         self.duration = self.mpv.get_property::<f64>("duration").unwrap_or(0.0);
+        if self.is_loaded {
+            if let Some(recording) = &mut self.recording {
+                self.duration = self.duration.max(recording.latest());
+            }
+        }
         self.is_playing = !self.mpv.get_property::<bool>("pause").unwrap_or(false);
         self.is_muted = self.mpv.get_property::<bool>("mute").unwrap_or(false);
         self.volume = {
