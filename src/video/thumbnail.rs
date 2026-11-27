@@ -57,12 +57,15 @@ impl ThumbnailManager {
                         time = newer_time;
                     }
 
-                    if time > duration - 0.5 {
+                    let requested_time = time;
+                    if duration > 0.0 && time > duration - 0.5 {
                         time = (duration - 0.5).max(0.0);
                     }
 
                     let seek_pos = (time * ffmpeg::ffi::AV_TIME_BASE as f64) as i64;
-                    let _ = ictx.seek(seek_pos, ..);
+                    if ictx.seek(seek_pos, ..).is_err() {
+                        continue;
+                    }
                     decoder.flush();
 
                     let mut frame_found = false;
@@ -98,7 +101,7 @@ impl ThumbnailManager {
                             }
 
                             let image = egui::ColorImage::from_rgb([width, height], &data);
-                            let _ = res_tx.send((time, image));
+                            let _ = res_tx.send((requested_time, image));
                         }
                     }
                 }
